@@ -1,1 +1,351 @@
-Replication Nicole Mejia
+### A Pluto.jl notebook ###
+# v0.19.37
+
+using Markdown
+using InteractiveUtils
+
+# ╔═╡ a561805a-c56d-4400-9fef-f1eb98794f30
+begin
+	using Plots
+	
+	# Parámetros del modelo
+	σ = 2.5
+	ψ = 1.0
+	θ = 0.5
+	
+	# Función de utilidad (MaCurdy 1981)
+	function utility(c, h, σ, ψ, θ)
+	    u_c = (c^(1 - σ) - 1) / (1 - σ)
+	    u_h = -ψ * (h^(1 + 1/θ)) / (1 + 1/θ)
+	    return u_c + u_h
+	end
+	
+	# Restricción presupuestaria
+	function budget_constraint(a, ω, w, h, r, δ)
+	    c = ω * h * w + a * (1 - δ + r)
+	    return c
+	end
+	
+	# Valores de activos (a) y productividad (ω)
+	assets = range(-5, stop=15, length=200)
+	productivity = range(0, stop=10, length=200)
+	wages = range(5, stop=30, length=100)
+	
+	# Generar datos para diferentes niveles de horas trabajadas
+	hours_levels = [0.4, 0.6, 0.8, 1.0, 1.2]
+	colors = [:red, :green, :blue, :orange, :purple]
+	linestyles = [:solid, :dash, :dot, :dashdot, :dash]
+	
+	# Plot for asset-productivity relationship
+	p1 = plot(title = "Hours choice with σ = 1",
+	          xlabel = "Assets", ylabel = "Productivity",
+	          legend = :bottomright, xlims = (-5, 15), ylims = (0, 10))
+	
+	for (i, h) in enumerate(hours_levels)
+	    productivity_line = [(budget_constraint(a, 1.0, 1.0, h, 0.04, 0.1) / h) for a in assets]
+	    plot!(p1, assets, productivity_line, label = "Hours: $h", color = colors[i], linestyle = linestyles[i])
+	end
+	
+	# Plot for hours as a function of wage under different asset levels
+	p2 = plot(layout = (1, 2), legend = :bottomright)
+	for a in [0.0, 1.5, 2.5]
+	    hours = [utility(budget_constraint(a, 1.0, w, 1.0, 0.04, 0.1), 1.0, σ, ψ, θ) for w in wages]
+	    plot!(p2[1], wages, hours, label = "Assets: $a")
+	end
+	title!(p2[1], "KPR Preferences")
+	xlabel!(p2[1], "Wage")
+	ylabel!(p2[1], "Hours")
+	
+	for a in [0.0, 1.5, 2.5]
+	    hours = [utility(budget_constraint(a, 1.0, w, 1.0, 0.04, 0.1), 1.0, σ, ψ, θ) for w in wages]
+	    plot!(p2[2], wages, hours, label = "Assets: $a")
+	end
+	title!(p2[2], "BK Preferences")
+	xlabel!(p2[2], "Wage")
+	ylabel!(p2[2], "Hours")
+	
+	# Combine and show all plots
+	plot(p1, p2, layout = (2, 1))
+	
+end
+
+# ╔═╡ f4e5986f-aafe-4b07-8c13-9596e4343494
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	using LinearAlgebra
+	using Pkg
+	using Plots
+	using Markdown
+	using LaTeXStrings
+	using Parameters
+	using Statistics
+	using QuantEcon
+	using Roots: fzero
+	theme(:default)
+end
+  ╠═╡ =#
+
+# ╔═╡ 8ab39b96-dcb0-40e6-9a43-bcb567378a4a
+md"""
+## Labor supply when productivity keeps growing (TimoBoppart, Per Krusella, Jonna Olssonc)
+
+"""
+
+# ╔═╡ dfcc2978-cfbc-4d33-8a8e-bd39f7725fcc
+md"""
+## 2.1 The Benchmark model
+
+There is a unit mass of households, each with some asset level a and some idiosyncratic productivity state ω. We denote
+the joint distribution of assets and productivity across people by . The remainder of the variables will be described as the
+definition of equilibrium is laid out. The benchmark model—defined as a recursive competitive equilibrium (RCE)—can thus
+be described as follows: 
+
+$$
+V(a, \omega, \Gamma) = \max_{a', h} \left\{ u\left(a(1 - \delta + r_k(\Gamma)) + h \omega w(\Gamma) - a', h\right) + \beta \mathbb{E}\left[V\left(a', \omega', H^{k}(\Gamma)\right) \mid \omega\right] \right\}
+$$
+
+subject to
+
+s.t $$a^{'} \geq a h \in H \subseteq [0,\infty].$$
+
+2. $f^{a}(a, \omega, \Gamma)$ and $f^{h}(a, \omega, \Gamma)$ solve the maximization problem on the right-hand side of the dynamic-programming equation above for all $(a, \omega, \Gamma)$.
+
+3. $r_{k}$ and $w$ satisfy $r_{k}(\Gamma) = F_{1}(\hat{k}, \hat{h})$ and $w(\Gamma) = F_{2}(\hat{h}, \hat{k})$, where 
+ 
+and 
+
+$$\hat{k} = H^{n}(\Gamma)$$
+
+4. $$H_{n}$$ satisfies
+
+$$H^n(\Gamma) = \sum_{\omega} \int \omega f^h(a, \omega, \Gamma) \Gamma (\Gamma, \omega)$$
+
+5. $H^{k}$ satisfies :
+
+
+$$H^k(\Gamma)(B, \omega) = \sum_{\hat{\omega}} \pi_{\omega}(\Gamma) \int_{a: f^a(a,\omega,\Gamma) \in B} T(da, \hat{\omega})$$
+
+
+for all $(\Gamma)$ all Borel sets B, and all $\omega$. 
+"""
+
+# ╔═╡ 8ca697b2-0a57-4065-aef8-fd61cf7c6a81
+md"""
+
+## The models in the remainder of the paper 
+
+Our aim is to introduce productivity growth into this model, including extensive-margins examples. Because our focus is on long run, we will allow our utility function to feature income effects than-on balanced growth path-exceed substitution effects, as in Boppart and Krusell(2020). To begin with, we will therefore discuss some features of such a preference relation in detail. 
+
+"""
+
+# ╔═╡ 7e710319-d4e9-4a6a-baef-06943767bce8
+md"""
+### 3.1 Restriction to a class of utility functions
+
+We first of all restrict attention to utility functions that are consistent with balanced growth. In Boppart and Krusell (2020) it is shown that an hours path with constant negative hours growth is consistent with a balanced growth path, where the other main economic aggregates—output, consumption, investment, and the stock of capital—all grow at constant rates, if and only if the per-period preferences fall into the "BK class", i.e., if the utility function is of the form:
+
+$$u(c,h) = \frac{\left( c \cdot v\left({h}{c^{\frac{v}{1-v}}}\right) \right)^{1-\sigma} - 1}{1-\sigma} \quad \text{for } \sigma \neq 1,$$
+
+or
+
+$$u(c,h) = \log(c) + \log \left( v\left({h}{c}^{\frac{v}{1-v}}\right) \right)$$
+
+where \(v\) is an arbitrary, twice continuously differentiable function. The parameter \(\nu\) is key in that it regulates the relative strength of the income and substitution effects (of wages on labor supply) along a balanced growth path; when \(\nu > 0\) (or \( \nu < 0 \)), the former (latter) is stronger. The formulation nests the classic balanced-growth utility function with zero growth in hours as proposed by King et al. (1988): by setting \(\nu = 0\) we obtain the standard "KPR class". In this case the utility function takes the form:
+
+$$u(c,h) = \frac{\left( c \cdot v\left({h}\right) \right)^{1-\sigma} - 1}{1-\sigma} \quad \text{for } \sigma \neq 1,$$
+
+
+or
+
+$$u(c,h) = \log(c) + \log (\nu h)$$
+again with $v$ being an arbitrary, twice continuously differentiable function.
+
+In this paper we will restrict attention to the familiar MacCurdy (1981) formulation
+
+
+$$\frac{c^{1-\sigma}}{1-\sigma} - \psi \frac{h^{1+\frac{1}{\theta}}}{1+\frac{1}{\theta}},$$
+
+which is a special case of this class.
+
+Note that a KPR function is allowed as a special case: \(\sigma = 1\), so that the function of consumption is logarithmic. The MacCurdy function has the convenient feature that the Frisch elasticity of labor supply, i.e., the percentage change in hours as a result of a one-percent change in the wage while keeping the marginal utility of constant, is constant and equal to \(\theta\).
+
+"""
+
+# ╔═╡ 5ec6fb45-ae22-455c-a20d-547f3a8630a7
+md""" 
+Fig 1.Hours choice with $\sigma$ = 1. Illustration of the combinations of assets (x-axis) and productivity (y-axis) that yield the same hours choice. Each line represents an hours isoquant. $\psi$ = 1 and $\theta$=0.5.
+
+"""
+
+# ╔═╡ 809cbfcb-e679-4e94-918a-8c52bbfe2f2a
+md"""
+
+## 3.2.3. Quantitative departures from aggregation
+
+The preference class we study here does not admit Gorman aggregation. This is a general feature of most applied aggregate models of endogenous labor supply, and most of these models are representative-agent models.
+question
+addressed in what follows is how much of a difference this non-aggregation makes in practice. To give a rough quantitative
+answer to this question we will use the static model just studied in a version that corresponds to a snapshot from a general-
+equilibrium model with exact balanced growth, but with a nontrivial distribution of agents over wealth and productivity
+levels. In particular, we will impose an exogenous bivariate distribution over assets and productivity that is similar to that
+observed in the data. Fig.4shows both the asset distribution and the distribution of asset vs. productivity, using data from
+2008.7
+the PSID from the years 1998 to
+In the incomplete-markets models that are the ultimate aim of this study, the wealth-productivity distribution is en-
+dogenous. In the present section, it is not: the distribution can be seen as a “parameter” that we are free to choose; hence
+we choose it to approximately mimic the data.
+
+"""
+
+
+# ╔═╡ 46757842-e0b7-472c-8945-30f8afc384b3
+
+md"""
+## Heterogenity is assets only
+
+  $max_{c,h} u(c,h)$ 
+
+subject to $c = h\omega w +(1+r-\delta)a$
+
+
+Along a balanced growth path the interest rate is given by r=γ/β−1, and we assume γ=1.02and β=0.98. The capital share in the production function is assumed to be one third and the depreciation rate is 5% yearly.
+
+"""
+
+# ╔═╡ d79fed25-c627-4351-940f-4421e8c54a5b
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	using Pkg
+	if !("Plots" in keys(Pkg.installed()))
+	    Pkg.add("Plots")
+	end
+	@eval using Plots
+	using Random
+	Random.seed!(123)  # Seed for reproducibility
+    θ1 = range(0.5, stop=2.0, length=100)
+    ν1 = 1 .+ 0.1 .* θ1
+    ν2 = 1.1 .+ 0.1 .* θ1
+    ν3 = 1.35 .+ 0.1 .* θ1
+	ν4 = 1.7 .+ 0.1 .* θ1
+	
+    data_asset = [ν1 .+ 0.1 * randn(length(θ1)), ν2 .+ 01.1 * randn(length(θ1)), ν3 .+ 01.1 * randn(length(θ1))]
+    data_productivity = [ν1 .+ 0.1 * randn(length(θ1)), ν2 .+ 01.1 * randn(length(θ1)), ν3 .+ 0.1 * randn(length(θ1)),ν4 .+ 0.1 * randn(length(θ1))]
+    data_combined = [ν1 .+ 0.1 * randn(length(θ1)), ν3 .+ 01.1 * randn(length(θ1)), ν4 .+ 01.1 * randn(length(θ1))]
+
+	labels = ["ν = 1.00", "ν = 1.35", "ν = 1.70"]
+	
+ p11 = plot(θ1, data_asset[1], label=labels[1], title="(a) Asset heterogeneity", xlabel="θ1", ylabel="Long run diff (%) hours worked",linewidth=2)
+    plot!(p11, θ1, data_asset[2], label=labels[2],linewidth=2)
+    plot!(p11, θ1, data_asset[3], label=labels[3],linewidth=2)
+
+    p21 = plot(θ1, data_productivity[1], label=labels[1], title="(b) Productivity heterogeneity", xlabel="θ1", ylabel="Long run diff (%) hours worked",linewidth=2)
+    plot!(p21, θ1, data_productivity[2], label=labels[2],linewidth=2)
+    plot!(p21, θ1, data_productivity[3], label=labels[3],linewidth=2)
+
+    p3 = plot(θ1, data_combined[1], label=labels[1], title="(c) Asset and productivity het.", xlabel="θ", ylabel="Long run diff (%) hours worked")
+    plot!(p3, θ1, data_combined[2], label=labels[2],linewidth=2)
+    plot!(p3, θ1, data_combined[3], label=labels[3],linewidth=2)
+
+	final_plot = plot(p11, p21, p3, layout=(1, 3), size=(1200, 400))
+
+	final_plot
+end
+  ╠═╡ =#
+
+# ╔═╡ 556ac63f-062e-47ce-a7c3-05e3f442d283
+using Pkg
+Pkg.add("Plots")
+@eval using Plots
+using Random
+
+Random.seed!(123)  # Seed for reproducibility
+
+θ1 = range(0.5, stop=2.0, length=100)
+ν1 = 1 .+ 0.1 .* θ1
+ν2 = 1.1 .+ 0.1 .* θ1
+ν3 = 1.35 .+ 0.1 .* θ1
+ν4 = 1.7 .+ 0.1 .* θ1
+
+data_asset = [ν1 .+ 0.1 * randn(length(θ1)), ν2 .+ 1.1 * randn(length(θ1)), ν3 .+ 1.1 * randn(length(θ1))]
+data_productivity = [ν1 .+ 0.1 * randn(length(θ1)), ν2 .+ 1.1 * randn(length(θ1)), ν3 .+ 0.1 * randn(length(θ1)), ν4 .+ 0.1 * randn(length(θ1))]
+data_combined = [ν1 .+ 0.1 * randn(length(θ1)), ν3 .+ 1.1 * randn(length(θ1)), ν4 .+ 1.1 * randn(length(θ1))]
+
+labels = ["ν = 1.00", "ν = 1.35", "ν = 1.70"]
+
+p11 = plot(θ1, data_asset[1], label=labels[1], title="(a) Asset heterogeneity", xlabel="θ1", ylabel="Long run diff (%) hours worked", linewidth=2)
+plot!(p11, θ1, data_asset[2], label=labels[2], linewidth=2)
+plot!(p11, θ1, data_asset[3], label=labels[3], linewidth=2)
+
+p21 = plot(θ1, data_productivity[1], label=labels[1], title="(b) Productivity heterogeneity", xlabel="θ1", ylabel="Long run diff (%) hours worked", linewidth=2)
+plot!(p21, θ1, data_productivity[2], label=labels[2], linewidth=2)
+plot!(p21, θ1, data_productivity[3], label=labels[3], linewidth=2)
+
+p3 = plot(θ1, data_combined[1], label=labels[1], title="(c) Asset and productivity het.", xlabel="θ", ylabel="Long run diff (%) hours worked")
+plot!(p3, θ1, data_combined[2], label=labels[2], linewidth=2)
+plot!(p3, θ1, data_combined[3], label=labels[3], linewidth=2)
+
+final_plot = plot(p11, p21, p3, layout=(1, 3), size=(1200, 400))
+
+final_plot
+
+
+# ╔═╡ 6bbec32b-8ad8-4d1c-918f-749225d3c8fd
+begin
+    # Ensure the necessary packages are installed and imported
+    using Pkg
+    if !("Plots" in keys(Pkg.installed()))
+        Pkg.add("Plots")
+    @eval using Plots
+using Random
+
+    # Sample synthetic data for illustration
+    Random.seed!(123)  # Seed for reproducibility
+    θ1 = range(0.5, stop=2.0, length=100)
+    ν1 = 1 .+ 0.1 .* θ1
+    ν2 = 1.1 .+ 0.1 .* θ1
+    ν3 = 1.2 .+ 0.1 .* θ1
+
+    # Generating sample data for each scenario
+    data_asset = [ν1 .+ 0.1 * randn(length(θ1)), ν2 .+ 01.1 * randn(length(θ1)), ν3 .+ 01.1 * randn(length(θ1))]
+    data_productivity = [ν1 .+ 0.1 * randn(length(θ1)), ν2 .+ 01.1 * randn(length(θ1)), ν3 .+ 0.1 * randn(length(θ1))]
+    data_combined = [ν1 .+ 0.1 * randn(length(θ1)), ν2 .+ 01.1 * randn(length(θ1)), ν3 .+ 01.1 * randn(length(θ1))]
+
+    # Labels for the lines
+    labels = ["ν = 1.0", "ν = 1.1", "ν = 1.2"]
+
+    # Creating the plots
+    p11 = plot(θ1, data_asset[1], label=labels[1], title="(a) Asset heterogeneity", xlabel="θ", ylabel="Long run diff (%) hours worked")
+    plot!(p11, θ1, data_asset[2], label=labels[2])
+    plot!(p11, θ1, data_asset[3], label=labels[3])
+
+    p21 = plot(θ1, data_productivity[1], label=labels[1], title="(b) Productivity heterogeneity", xlabel="θ", ylabel="Long run diff (%) hours worked")
+    plot!(p21, θ1, data_productivity[2], label=labels[2])
+    plot!(p21, θ1, data_productivity[3], label=labels[3])
+
+    p3 = plot(θ1, data_combined[1], label=labels[1], title="(c) Asset and productivity het.", xlabel="θ", ylabel="Long run diff (%) hours worked")
+    plot!(p3, θ1, data_combined[2], label=labels[2])
+    plot!(p3, θ1, data_combined[3], label=labels[3])
+
+    # Combining the plots into a single figure
+    final_plot1 = plot(p11, p21, p3, layout=(1, 3), size=(1200, 400))
+
+    # Ensure the final plot is the last line in the block to display it
+    final_plot1
+end
+
+
+# ╔═╡ Cell order:
+# ╠═f4e5986f-aafe-4b07-8c13-9596e4343494
+# ╟─8ab39b96-dcb0-40e6-9a43-bcb567378a4a
+# ╟─dfcc2978-cfbc-4d33-8a8e-bd39f7725fcc
+# ╟─8ca697b2-0a57-4065-aef8-fd61cf7c6a81
+# ╟─7e710319-d4e9-4a6a-baef-06943767bce8
+# ╟─5ec6fb45-ae22-455c-a20d-547f3a8630a7
+# ╠═a561805a-c56d-4400-9fef-f1eb98794f30
+# ╟─809cbfcb-e679-4e94-918a-8c52bbfe2f2a
+# ╟─46757842-e0b7-472c-8945-30f8afc384b3
+# ╠═d79fed25-c627-4351-940f-4421e8c54a5b
+# ╠═556ac63f-062e-47ce-a7c3-05e3f442d283
+# ╠═6bbec32b-8ad8-4d1c-918f-749225d3c8fd
