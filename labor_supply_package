@@ -8,30 +8,30 @@ using InteractiveUtils
 begin
 	using Plots
 	
-	# Parámetros del modelo
+	# Parameters of the model 
 	σ = 2.5
 	ψ = 1.0
 	θ = 0.5
 	
-	# Función de utilidad (MaCurdy 1981)
+	# Utility Function (MaCurdy 1981)
 	function utility(c, h, σ, ψ, θ)
 	    u_c = (c^(1 - σ) - 1) / (1 - σ)
 	    u_h = -ψ * (h^(1 + 1/θ)) / (1 + 1/θ)
 	    return u_c + u_h
 	end
 	
-	# Restricción presupuestaria
+	# Budget Constraint 
 	function budget_constraint(a, ω, w, h, r, δ)
 	    c = ω * h * w + a * (1 - δ + r)
 	    return c
 	end
 	
-	# Valores de activos (a) y productividad (ω)
+	# Active Values (a) and productivity (ω)
 	assets = range(-5, stop=15, length=200)
 	productivity = range(0, stop=10, length=200)
 	wages = range(5, stop=30, length=100)
 	
-	# Generar datos para diferentes niveles de horas trabajadas
+	# Generate data for level of working hours 
 	hours_levels = [0.4, 0.6, 0.8, 1.0, 1.2]
 	colors = [:red, :green, :blue, :orange, :purple]
 	linestyles = [:solid, :dash, :dot, :dashdot, :dash]
